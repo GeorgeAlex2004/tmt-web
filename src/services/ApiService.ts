@@ -22,9 +22,9 @@ interface ApiResponse {
 
 export class ApiService {
   // Try localhost first, then fallback to the correct IP
-  private static readonly baseUrl = 'http://192.168.1.19:5000'; 
+  private static readonly baseUrl = 'http://192.168.29.144:5000'; 
   private static readonly fallbackUrl = 'http://127.0.0.1:5000'; 
-  private static readonly timeout = 120000; // 120 seconds (2 minutes) for complex operations like SAM + height analysis
+  private static readonly timeout = 180000; // 180 seconds (3 minutes) for complex operations like SAM segmentation
   private static readonly serverCheckTimeout = 5000; // 5 seconds
   
   // Cache for API responses
@@ -538,7 +538,9 @@ export class ApiService {
       console.log('Request URL:', url);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+      // Extended timeout for SAM segmentation (can take 60+ seconds)
+      const extendedTimeout = 180000; // 3 minutes for SAM segmentation
+      const timeoutId = setTimeout(() => controller.abort(), extendedTimeout);
       
       const response = await fetch(url, {
         method: 'POST',

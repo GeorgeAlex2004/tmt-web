@@ -431,6 +431,10 @@ class TMTBarDetector:
         self.use_sam = True  # SAM is always required
         self.debug_mode = False
         
+        # Cache for SAM set_image to avoid redundant calls
+        self._last_sam_image_id = None
+        self._last_sam_image_shape = None
+        
         logger.info("SAM is REQUIRED and will be used for all TMT bar segmentation")
         logger.info("No fallback methods are available - SAM must succeed")
     
@@ -644,89 +648,96 @@ class TMTBarDetector:
         # STEP 3: SAM SEGMENTATION (Only if ribs are sufficient)
         logger.info("=== STEP 3: SAM SEGMENTATION ===")
         
+        # IMPORTANT: Only process the FIRST (best) TMT bar to avoid timeout
+        # Processing multiple TMT bars sequentially would take too long (50+ seconds each)
+        if len(validated_tmt_detections) > 1:
+            logger.info(f"Multiple TMT bars detected ({len(validated_tmt_detections)}). Processing only the first one to avoid timeout.")
+            logger.info("If you need to process multiple bars, please crop the image to show one bar at a time.")
+        
         tmt_crops = []
-        for tmt_detection in validated_tmt_detections:
-            bbox = tmt_detection['bbox']
-            confidence = tmt_detection['confidence']
-            class_name = tmt_detection['class_name']
-            rib_validation = tmt_detection['rib_validation']
-            
-            logger.info(f"Processing TMT bar with {rib_validation['rib_count']} ribs for SAM segmentation")
-            logger.info("=" * 50)
-            logger.info("STARTING SAM SEGMENTATION FLOW")
-            logger.info("=" * 50)
-            
-            # Use SAM for precise segmentation with timeout
-            tmt_crop = None
-            sam_success = False
-            
-            if self.use_sam:
-                logger.info("Using SAM for TMT bar segmentation")
-                try:
-                    sam_start_time = time.time()
-                    
-                    # SAM is mandatory - run it directly without timeout
-                    logger.info("Starting SAM segmentation (mandatory)...")
-                    logger.info(f"Calling _extract_with_sam with image shape: {image.shape}")
-                    logger.info(f"Bbox coordinates: {bbox}")
-                    
-                    tmt_crop = self._extract_with_sam(image, bbox)
-                    
-                    if tmt_crop is not None:
-                        sam_success = True
-                        logger.info("SAM segmentation completed successfully")
-                        logger.info(f"TMT crop shape: {tmt_crop.shape}")
-                    else:
-                        logger.error("SAM segmentation returned None - this is critical!")
-                        raise RuntimeError("SAM segmentation failed to produce a valid crop.")
-                    
-                    sam_time = time.time() - sam_start_time
-                    logger.info(f"SAM segmentation completed in {sam_time:.3f} seconds")
-                    logger.info("=" * 50)
-                    logger.info("SAM SEGMENTATION FLOW COMPLETED SUCCESSFULLY")
-                    logger.info("=" * 50)
-                except Exception as sam_error:
-                    logger.error("=" * 50)
-                    logger.error("SAM SEGMENTATION FLOW FAILED")
-                    logger.error("=" * 50)
-                    logger.error(f"SAM segmentation failed: {sam_error}")
-                    raise RuntimeError(f"SAM segmentation is mandatory and failed: {sam_error}")
-            else:
-                logger.error("SAM is mandatory but not available - this should never happen!")
-                raise RuntimeError("SAM is required for TMT bar analysis but is not available.")
-            
-            # SAM is mandatory - if it fails, we cannot proceed
-            if not sam_success:
-                logger.error("SAM segmentation failed - this is critical!")
-                logger.error("TMT bar analysis cannot proceed without SAM segmentation")
-                raise RuntimeError("SAM segmentation failed. TMT bar analysis requires SAM and cannot use fallback methods.")
-            
-
-            
-            # Verify SAM crop is valid
-            if tmt_crop is None or tmt_crop.size == 0:
-                logger.error("SAM segmentation produced invalid crop - this is critical!")
-                raise RuntimeError("SAM segmentation produced invalid crop. TMT bar analysis cannot proceed.")
-            
-            if tmt_crop is not None and tmt_crop.size > 0:
-                # Convert to analysis format
-                if len(tmt_crop.shape) == 3 and tmt_crop.shape[2] == 4:  # RGBA
-                    analysis_crop = cv2.cvtColor(tmt_crop, cv2.COLOR_BGRA2BGR)
+        # Only process the first TMT bar (highest confidence or first in list)
+        tmt_detection = validated_tmt_detections[0]
+        bbox = tmt_detection['bbox']
+        confidence = tmt_detection['confidence']
+        class_name = tmt_detection['class_name']
+        rib_validation = tmt_detection['rib_validation']
+        
+        logger.info(f"Processing TMT bar with {rib_validation['rib_count']} ribs for SAM segmentation")
+        logger.info("=" * 50)
+        logger.info("STARTING SAM SEGMENTATION FLOW")
+        logger.info("=" * 50)
+        
+        # Use SAM for precise segmentation with timeout
+        tmt_crop = None
+        sam_success = False
+        
+        if self.use_sam:
+            logger.info("Using SAM for TMT bar segmentation")
+            try:
+                sam_start_time = time.time()
+                
+                # SAM is mandatory - run it directly without timeout
+                logger.info("Starting SAM segmentation (mandatory)...")
+                logger.info(f"Calling _extract_with_sam with image shape: {image.shape}")
+                logger.info(f"Bbox coordinates: {bbox}")
+                
+                tmt_crop = self._extract_with_sam(image, bbox)
+                
+                if tmt_crop is not None:
+                    sam_success = True
+                    logger.info("SAM segmentation completed successfully")
+                    logger.info(f"TMT crop shape: {tmt_crop.shape}")
                 else:
-                    analysis_crop = tmt_crop
+                    logger.error("SAM segmentation returned None - this is critical!")
+                    raise RuntimeError("SAM segmentation failed to produce a valid crop.")
                 
-                # Create crop metadata
-                crop_metadata = {
-                    'crop': analysis_crop,
-                    'original_crop': tmt_crop,
-                    'bbox': bbox,
-                    'confidence': confidence,
-                    'class_name': class_name,
-                    'rib_validation': rib_validation
-                }
-                
-                tmt_crops.append(crop_metadata)
-                logger.info(f"Successfully created crop for TMT bar with {rib_validation['rib_count']} ribs")
+                sam_time = time.time() - sam_start_time
+                logger.info(f"SAM segmentation completed in {sam_time:.3f} seconds")
+                logger.info("=" * 50)
+                logger.info("SAM SEGMENTATION FLOW COMPLETED SUCCESSFULLY")
+                logger.info("=" * 50)
+            except Exception as sam_error:
+                logger.error("=" * 50)
+                logger.error("SAM SEGMENTATION FLOW FAILED")
+                logger.error("=" * 50)
+                logger.error(f"SAM segmentation failed: {sam_error}")
+                raise RuntimeError(f"SAM segmentation is mandatory and failed: {sam_error}")
+        else:
+            logger.error("SAM is mandatory but not available - this should never happen!")
+            raise RuntimeError("SAM is required for TMT bar analysis but is not available.")
+        
+        # SAM is mandatory - if it fails, we cannot proceed
+        if not sam_success:
+            logger.error("SAM segmentation failed - this is critical!")
+            logger.error("TMT bar analysis cannot proceed without SAM segmentation")
+            raise RuntimeError("SAM segmentation failed. TMT bar analysis requires SAM and cannot use fallback methods.")
+        
+
+        
+        # Verify SAM crop is valid
+        if tmt_crop is None or tmt_crop.size == 0:
+            logger.error("SAM segmentation produced invalid crop - this is critical!")
+            raise RuntimeError("SAM segmentation produced invalid crop. TMT bar analysis cannot proceed.")
+        
+        if tmt_crop is not None and tmt_crop.size > 0:
+            # Convert to analysis format
+            if len(tmt_crop.shape) == 3 and tmt_crop.shape[2] == 4:  # RGBA
+                analysis_crop = cv2.cvtColor(tmt_crop, cv2.COLOR_BGRA2BGR)
+            else:
+                analysis_crop = tmt_crop
+            
+            # Create crop metadata
+            crop_metadata = {
+                'crop': analysis_crop,
+                'original_crop': tmt_crop,
+                'bbox': bbox,
+                'confidence': confidence,
+                'class_name': class_name,
+                'rib_validation': rib_validation
+            }
+            
+            tmt_crops.append(crop_metadata)
+            logger.info(f"Successfully created crop for TMT bar with {rib_validation['rib_count']} ribs")
         
         total_time = time.time() - start_time
         logger.info(f"=== COMPLETE DETECTION FLOW FINISHED IN {total_time:.3f} SECONDS ===")
@@ -807,12 +818,25 @@ class TMTBarDetector:
             x1, y1, x2, y2 = bbox
             logger.info(f"Starting SAM segmentation for bbox: ({x1}, {y1}, {x2}, {y2})")
             
-            # Set the image for SAM
-            logger.info("Setting image for SAM predictor...")
-            set_image_start = time.time()
-            self.sam_predictor.set_image(image)
-            set_image_time = time.time() - set_image_start
-            logger.info(f"SAM set_image completed in {set_image_time:.3f} seconds")
+            # Set the image for SAM (only if image has changed to avoid redundant calls)
+            # Use image id and shape to detect if it's the same image
+            current_image_id = id(image)
+            current_image_shape = image.shape
+            
+            # Check if we need to call set_image (only if image changed)
+            if (self._last_sam_image_id != current_image_id or 
+                self._last_sam_image_shape != current_image_shape):
+                logger.info("Setting image for SAM predictor (image changed)...")
+                set_image_start = time.time()
+                self.sam_predictor.set_image(image)
+                set_image_time = time.time() - set_image_start
+                logger.info(f"SAM set_image completed in {set_image_time:.3f} seconds")
+                
+                # Cache the image info
+                self._last_sam_image_id = current_image_id
+                self._last_sam_image_shape = current_image_shape
+            else:
+                logger.info("Skipping SAM set_image (same image as previous call)")
             
             # Create multiple input points along the TMT bar for better segmentation
             # Calculate points along the center line of the TMT bar
@@ -5334,6 +5358,7 @@ def detect_tmt_bar_endpoint():
     start_time = time.time()
     
     try:
+        # Note: SAM segmentation can take 60+ seconds, so ensure client timeout is set appropriately
         # Monitor initial performance
         initial_performance = monitor_performance()
         
