@@ -21,6 +21,7 @@ try {
         'home': '🏠',
         'settings': '⚙️',
         'camera-alt': '📷',
+        'photo-camera': '📷',
         'image': '🖼️',
         'history': '📜',
         'logout': '🚪',
@@ -44,6 +45,7 @@ try {
         'print': '🖨️',
         'edit': '✏️',
         'delete': '🗑️',
+        'delete-forever': '🗑️',
         'add': '+',
         'remove': '−',
         'info': 'ℹ️',
@@ -51,6 +53,14 @@ try {
         'error': '❌',
         'check-circle': '✓',
         'cancel': '✕',
+        'lightbulb-outline': '💡',
+        'blur-off': '🔍',
+        'crop-free': '📐',
+        'filter-none': '🖼️',
+        'view-module': '📊',
+        'report-problem': '⚠️',
+        'stay-primary-portrait': '📱',
+        'science': '🔬',
       };
       
       const iconChar = iconMap[name] || '?';

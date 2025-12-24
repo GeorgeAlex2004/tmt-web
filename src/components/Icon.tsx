@@ -8,8 +8,14 @@ let IconComponent: any;
 try {
   // Primary: Use @expo/vector-icons (works on web and native)
   const { MaterialIcons } = require('@expo/vector-icons');
-  IconComponent = MaterialIcons;
+  // Ensure it's available and has the createIconSet method
+  if (MaterialIcons && typeof MaterialIcons === 'function') {
+    IconComponent = MaterialIcons;
+  } else {
+    throw new Error('MaterialIcons not properly loaded');
+  }
 } catch (e) {
+  console.warn('@expo/vector-icons not available, using fallback:', e.message);
   // Fallback 1: Try react-native-vector-icons (native only)
   try {
     IconComponent = require('react-native-vector-icons/MaterialIcons').default;
@@ -21,6 +27,7 @@ try {
         'home': '🏠',
         'settings': '⚙️',
         'camera-alt': '📷',
+        'photo-camera': '📷',
         'image': '🖼️',
         'history': '📜',
         'logout': '🚪',
@@ -44,6 +51,7 @@ try {
         'print': '🖨️',
         'edit': '✏️',
         'delete': '🗑️',
+        'delete-forever': '🗑️',
         'add': '+',
         'remove': '−',
         'info': 'ℹ️',
@@ -51,6 +59,14 @@ try {
         'error': '❌',
         'check-circle': '✓',
         'cancel': '✕',
+        'lightbulb-outline': '💡',
+        'blur-off': '🔍',
+        'crop-free': '📐',
+        'filter-none': '🖼️',
+        'view-module': '📊',
+        'report-problem': '⚠️',
+        'stay-primary-portrait': '📱',
+        'science': '🔬',
       };
       
       const iconChar = iconMap[name] || '?';
