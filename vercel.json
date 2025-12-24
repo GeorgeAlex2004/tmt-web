@@ -2,10 +2,10 @@
   "version": 2,
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "web-build",
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
