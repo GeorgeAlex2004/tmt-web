@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, TextInput, Alert, Platform, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import CoeLogo from '../assets/images/Coe.png';
@@ -330,9 +330,33 @@ const SettingsScreen = () => {
           <Text style={styles.aboutTitle}>About</Text>
           <Text style={styles.aboutText}>TMT Quality Testing App v1.0.0{"\n"}Developed by CoE for AgenticTwins, SRMIST</Text>
           <View style={styles.logoRow}>
-            <Image source={CoeLogo} style={styles.logoImg} resizeMode="contain" />
-            <Image source={SRMLogo} style={styles.logoImg} resizeMode="contain" />
-            <Image source={TataSteelLogo} style={styles.logoImg} resizeMode="contain" />
+            <Image 
+              source={Platform.OS === 'web' 
+                ? { uri: CoeLogo } 
+                : CoeLogo
+              } 
+              style={styles.logoImg} 
+              resizeMode="contain"
+              onError={(e) => console.log('Coe logo error:', e)}
+            />
+            <Image 
+              source={Platform.OS === 'web'
+                ? { uri: SRMLogo }
+                : SRMLogo
+              } 
+              style={styles.logoImg} 
+              resizeMode="contain"
+              onError={(e) => console.log('SRM logo error:', e)}
+            />
+            <Image 
+              source={Platform.OS === 'web'
+                ? { uri: TataSteelLogo }
+                : TataSteelLogo
+              } 
+              style={styles.logoImg} 
+              resizeMode="contain"
+              onError={(e) => console.log('Tata Steel logo error:', e)}
+            />
           </View>
         </View>
       </View>

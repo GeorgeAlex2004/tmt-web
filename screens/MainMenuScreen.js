@@ -9,9 +9,10 @@ import {
   Animated,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from '../components/Icon';
 
 const { width } = Dimensions.get('window');
 
@@ -207,19 +208,31 @@ const MainMenuScreen = ({ navigation }) => {
         <View style={styles.logosContainer}>
           <View style={styles.logosRow}>
             <Image 
-              source={require('../assets/images/tata_steel.png')} 
+              source={Platform.OS === 'web' 
+                ? { uri: '/assets/images/tata_steel.png' }
+                : require('../assets/images/tata_steel.png')
+              } 
               style={styles.logoImage}
               resizeMode="contain"
+              onError={(e) => console.log('Tata Steel logo error:', e.nativeEvent.error)}
             />
             <Image 
-              source={require('../assets/images/SRM_logo.png')} 
+              source={Platform.OS === 'web'
+                ? { uri: '/assets/images/SRM_logo.png' }
+                : require('../assets/images/SRM_logo.png')
+              } 
               style={[styles.logoImage, styles.srmLogoSmall]}
               resizeMode="contain"
+              onError={(e) => console.log('SRM logo error:', e.nativeEvent.error)}
             />
             <Image 
-              source={require('../assets/images/Coe.png')} 
+              source={Platform.OS === 'web'
+                ? { uri: '/assets/images/Coe.png' }
+                : require('../assets/images/Coe.png')
+              } 
               style={styles.logoImage}
               resizeMode="contain"
+              onError={(e) => console.log('Coe logo error:', e.nativeEvent.error)}
             />
           </View>
         </View>
