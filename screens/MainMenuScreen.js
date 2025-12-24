@@ -208,31 +208,38 @@ const MainMenuScreen = ({ navigation }) => {
         <View style={styles.logosContainer}>
           <View style={styles.logosRow}>
             <Image 
-              source={Platform.OS === 'web' 
-                ? { uri: '/assets/images/tata_steel.png' }
-                : require('../assets/images/tata_steel.png')
-              } 
+              source={require('../assets/images/tata_steel.png')} 
               style={styles.logoImage}
               resizeMode="contain"
-              onError={(e) => console.log('Tata Steel logo error:', e.nativeEvent.error)}
+              onError={(e) => {
+                console.log('Tata Steel logo error:', e);
+                // Fallback for web if require doesn't work
+                if (Platform.OS === 'web') {
+                  return { uri: 'https://via.placeholder.com/200x80/0066CC/FFFFFF?text=TATA+STEEL' };
+                }
+              }}
             />
             <Image 
-              source={Platform.OS === 'web'
-                ? { uri: '/assets/images/SRM_logo.png' }
-                : require('../assets/images/SRM_logo.png')
-              } 
+              source={require('../assets/images/SRM_logo.png')} 
               style={[styles.logoImage, styles.srmLogoSmall]}
               resizeMode="contain"
-              onError={(e) => console.log('SRM logo error:', e.nativeEvent.error)}
+              onError={(e) => {
+                console.log('SRM logo error:', e);
+                if (Platform.OS === 'web') {
+                  return { uri: 'https://via.placeholder.com/150x60/CC0000/FFFFFF?text=SRM' };
+                }
+              }}
             />
             <Image 
-              source={Platform.OS === 'web'
-                ? { uri: '/assets/images/Coe.png' }
-                : require('../assets/images/Coe.png')
-              } 
+              source={require('../assets/images/Coe.png')} 
               style={styles.logoImage}
               resizeMode="contain"
-              onError={(e) => console.log('Coe logo error:', e.nativeEvent.error)}
+              onError={(e) => {
+                console.log('Coe logo error:', e);
+                if (Platform.OS === 'web') {
+                  return { uri: 'https://via.placeholder.com/200x80/009900/FFFFFF?text=CoE' };
+                }
+              }}
             />
           </View>
         </View>

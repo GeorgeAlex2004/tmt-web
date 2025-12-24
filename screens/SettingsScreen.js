@@ -331,28 +331,19 @@ const SettingsScreen = () => {
           <Text style={styles.aboutText}>TMT Quality Testing App v1.0.0{"\n"}Developed by CoE for AgenticTwins, SRMIST</Text>
           <View style={styles.logoRow}>
             <Image 
-              source={Platform.OS === 'web' 
-                ? { uri: CoeLogo } 
-                : CoeLogo
-              } 
+              source={CoeLogo} 
               style={styles.logoImg} 
               resizeMode="contain"
               onError={(e) => console.log('Coe logo error:', e)}
             />
             <Image 
-              source={Platform.OS === 'web'
-                ? { uri: SRMLogo }
-                : SRMLogo
-              } 
+              source={SRMLogo} 
               style={styles.logoImg} 
               resizeMode="contain"
               onError={(e) => console.log('SRM logo error:', e)}
             />
             <Image 
-              source={Platform.OS === 'web'
-                ? { uri: TataSteelLogo }
-                : TataSteelLogo
-              } 
+              source={TataSteelLogo} 
               style={styles.logoImg} 
               resizeMode="contain"
               onError={(e) => console.log('Tata Steel logo error:', e)}
