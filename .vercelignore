@@ -1,0 +1,59 @@
+# Vercel ignore file
+# Exclude files that are not needed for web deployment
+
+# Backend files
+backend/
+*.py
+*.pth
+*.pt
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+tata/
+
+# Node modules (will be installed by Vercel)
+node_modules/
+
+# Build artifacts
+.expo/
+.expo-shared/
+dist/
+build/
+web-build/
+
+# Development files
+*.log
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# Debug images and results
+backend/debug_images/
+backend/results/
+backend/uploads/
+
+# Weights and models
+backend/Weights/
+backend/sam_vit_h_4b8939.pth
+
+# Mobile-specific files
+*.apk
+*.ipa
+*.aab
+
+# Environment files (if any)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+

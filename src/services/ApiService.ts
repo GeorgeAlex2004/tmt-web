@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 
 interface AnalysisParams {
   image: string;
@@ -21,9 +22,22 @@ interface ApiResponse {
 }
 
 export class ApiService {
-  // Try localhost first, then fallback to the correct IP
+  // Deployed backend URL (for web/production)
+  private static readonly deployedUrl = 'https://unwonted-uplift-tmt-analyzer-backend.hf.space';
+  
+  // Local backend URLs (for mobile/development)
   private static readonly baseUrl = 'http://192.168.29.144:5000'; 
-  private static readonly fallbackUrl = 'http://127.0.0.1:5000'; 
+  private static readonly fallbackUrl = 'http://127.0.0.1:5000';
+  
+  // Get the appropriate base URL based on platform
+  private static getBaseUrl(): string {
+    // Check if running on web (TypeScript-safe check)
+    const isWeb = (Platform.OS as string) === 'web' || typeof window !== 'undefined';
+    if (isWeb) {
+      return this.deployedUrl;
+    }
+    return this.baseUrl;
+  } 
   private static readonly timeout = 180000; // 180 seconds (3 minutes) for complex operations like SAM segmentation
   private static readonly serverCheckTimeout = 5000; // 5 seconds
   
@@ -37,7 +51,53 @@ export class ApiService {
     let retryCount = 0;
     const maxRetries = 3;
     
-    // Try multiple candidate URLs (device, emulator, localhost, Metro host)
+    // On web, only try the deployed URL
+    const isWeb = (Platform.OS as string) === 'web' || typeof window !== 'undefined';
+    if (isWeb) {
+      const candidateUrls = [this.deployedUrl];
+      // Try the deployed URL
+      for (const url of candidateUrls) {
+        while (retryCount < maxRetries) {
+          try {
+            console.log(`Checking server availability at ${url} (attempt ${retryCount + 1}/${maxRetries})...`);
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.serverCheckTimeout);
+            
+            const response = await fetch(`${url}/check_server`, {
+              method: 'GET',
+              headers: {'Content-Type': 'application/json'},
+              signal: controller.signal,
+            });
+            
+            clearTimeout(timeoutId);
+            
+            console.log('Server response status:', response.status);
+            if (response.status === 200) {
+              console.log('Server is available at:', url);
+              return true;
+            }
+            
+            console.log('Server returned non-200 status:', response.status);
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          } catch (error) {
+            console.log('Error checking server at', url, ':', error);
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        }
+        retryCount = 0;
+      }
+      console.log('Server check failed for deployed URL');
+      return false;
+    }
+    
+    // For mobile platforms, try multiple candidate URLs (device, emulator, localhost, Metro host)
     const candidateUrls = [
       this.baseUrl,
       this.fallbackUrl,
@@ -68,8 +128,11 @@ export class ApiService {
           console.log('Server response status:', response.status);
           if (response.status === 200) {
             console.log('Server is available at:', url);
-            // Update baseUrl to the working URL
-            (this as any).baseUrl = url;
+            // Update baseUrl to the working URL (only for mobile)
+            const isWeb = (Platform.OS as string) === 'web' || typeof window !== 'undefined';
+            if (!isWeb) {
+              (this as any).baseUrl = url;
+            }
             return true;
           }
           
@@ -124,7 +187,7 @@ export class ApiService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
     try {
-      const endpoint = `${this.baseUrl}/process-ring-test`;
+      const endpoint = `${this.getBaseUrl()}/process-ring-test`;
       const res = await fetch(endpoint, {
         method: 'POST',
         // Let fetch set the correct multipart boundary; adding Accept for iOS
@@ -157,7 +220,7 @@ export class ApiService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.serverCheckTimeout * 4);
     try {
-      const res = await fetch(`${this.baseUrl}/get-ring-report?test_id=${encodeURIComponent(testId)}`, {
+      const res = await fetch(`${this.getBaseUrl()}/get-ring-report?test_id=${encodeURIComponent(testId)}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
@@ -243,7 +306,7 @@ export class ApiService {
 
     try {
       console.log('Making API request to analyze_angle_and_length...');
-      const url = `${this.baseUrl}/analyze_angle_and_length?diameter=${diameter}`;
+      const url = `${this.getBaseUrl()}/analyze_angle_and_length?diameter=${diameter}`;
       console.log('Request URL:', url);
       
       const controller = new AbortController();
@@ -334,7 +397,7 @@ export class ApiService {
 
     try {
       console.log('Making API request to analyze_rib_height...');
-      const url = `${this.baseUrl}/analyze_rib_height?diameter=${diameter}`;
+      const url = `${this.getBaseUrl()}/analyze_rib_height?diameter=${diameter}`;
       console.log('Request URL:', url);
       
       const controller = new AbortController();
@@ -379,7 +442,7 @@ export class ApiService {
   // Test quick detection endpoint
   static async testQuickEndpoint(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/test_quick`, {
+      const response = await fetch(`${this.getBaseUrl()}/test_quick`, {
         method: 'GET',
         headers: {'Content-Type': 'application/json'},
       });
@@ -403,7 +466,7 @@ export class ApiService {
       // Create a small test image (1x1 pixel)
       const testImageData = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
       
-      const response = await fetch(`${this.baseUrl}/test_quick_simple`, {
+      const response = await fetch(`${this.getBaseUrl()}/test_quick_simple`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -454,7 +517,7 @@ export class ApiService {
     
     try {
       console.log('Making API request to quick_detect...');
-      const url = `${this.baseUrl}/quick_detect?diameter=${diameter}`;
+      const url = `${this.getBaseUrl()}/quick_detect?diameter=${diameter}`;
       console.log('Request URL:', url);
       
       const controller = new AbortController();
@@ -534,7 +597,7 @@ export class ApiService {
 
     try {
       console.log('Making API request to detect_tmt_bar...');
-      const url = `${this.baseUrl}/detect_tmt_bar?diameter=${diameter}`;
+      const url = `${this.getBaseUrl()}/detect_tmt_bar?diameter=${diameter}`;
       console.log('Request URL:', url);
       
       const controller = new AbortController();
@@ -641,7 +704,7 @@ export class ApiService {
 
     try {
       console.log('Making API request to analyze_rib_unified...');
-      let url = `${this.baseUrl}/analyze_rib_unified?diameter=${diameter}`;
+      let url = `${this.getBaseUrl()}/analyze_rib_unified?diameter=${diameter}`;
       if (brand) {
         url += `&brand=${brand}`;
       }
@@ -716,7 +779,7 @@ export class ApiService {
 
     try {
       console.log('Making API request to calculate_ar_from_params...');
-      const url = `${this.baseUrl}/calculate_ar_from_params`;
+      const url = `${this.getBaseUrl()}/calculate_ar_from_params`;
       console.log('Request URL:', url);
       
       const controller = new AbortController();
@@ -761,7 +824,7 @@ export class ApiService {
   // Clear backend cache (if endpoint exists)
   static async clearBackendCache(): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/clear_cache`, {
+      const response = await fetch(`${this.getBaseUrl()}/clear_cache`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
       });
